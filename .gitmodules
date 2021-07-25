@@ -1,0 +1,3 @@
+[submodule "solvespace.sub"]
+	path = solvespace.sub
+	url = https://github.com/solvespace/solvespace.git
