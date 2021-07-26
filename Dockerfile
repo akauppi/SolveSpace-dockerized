@@ -11,25 +11,28 @@
 # References:
 #   - Best practices for writing Dockerfiles
 #       -> https://docs.docker.com/develop/develop-images/dockerfile_best-practices/
-#   - "How do you set a locale non-interactively on Debian/Ubuntu?" (NOTE: OLD: 2012..15!)
-#       -> https://serverfault.com/questions/362903/how-do-you-set-a-locale-non-interactively-on-debian-ubuntu/689947#689947
+#   - Docker official images > Ubuntu
+#       -> https://hub.docker.com/_/ubuntu
 #
-FROM debian:buster-slim
+#FROM debian:buster-slim    # see Issue #1
+#FROM debian:bullseye       # -''-
+FROM ubuntu:rolling
+  # 21.04 = hirsute (Jul 2021); 30 MB
 
 ENV HOME /home/user
 ENV USER user
 
-RUN apt-get update && apt-get install -y \
+# Note: 'DEBIAN_FRONTEND="noninteractive"' is needed to not be asking about locale (applies only for the install).
+#
+RUN apt-get update && DEBIAN_FRONTEND="noninteractive" apt-get install -y \
   build-essential \
   cmake \
-  locales \
   pkg-config \
   && rm -rf /var/lib/apt/lists/*
   #
-  # locales: needed to run 'build/bin/solvespace' [https://stackoverflow.com/a/54325765/14455]
   # pkg-config: needed by 'cmake' but not mentioned in SolveSpace README
 
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && DEBIAN_FRONTEND="noninteractive" apt-get install -y \
   libcairo2-dev \
   libfreetype6-dev \
   libgl-dev \
@@ -45,8 +48,9 @@ RUN apt-get update && apt-get install -y \
 #  libfontconfig1-dev \
 #  libglu-dev \
 #  libspnav-dev
-#
-# Note: Having them does not help with the GUI startup issues. ('Unable to create a GL context')
+  # libspnav-dev: needed for SpaceNavigator support
+
+# Note: Having them does not help with the GUI startup issues. (Issue #1)
 #
 #RUN apt-get update && apt-get install -y \
 #  libfontconfig1-dev \
@@ -77,15 +81,7 @@ RUN cd build && make
 
 #--- Locale ---
 #
-# Needed for executing 'build/bin/solvespace'
-#
-# Adapted from -> https://gist.github.com/shyd/ce8ba7e20d4f825ed3a8e57aa30b892b
-#
-# Note: Tried to avoid the 'ENV LANG=...' and make the Docker internals set it, instead. But this works.
-#
-RUN sed -i '/en_US.UTF-8/s/^# //' /etc/locale.gen \
-  && locale-gen
-ENV LANG=en_US.UTF-8
+ENV LANG=C.UTF-8
 
 #RUN chown -R ${USER} ${HOME}/src
 

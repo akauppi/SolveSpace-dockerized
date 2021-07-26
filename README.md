@@ -70,7 +70,7 @@ tbd. Instructions on how to run it off the Docker image - once we have access to
 #### macOS
 
 ```
-$ docker run -it --rm -v`pwd`:/work solvespace
+$ docker run --rm -v`pwd`:/work solvespace
 ```
 
 <!-- tbd. 
