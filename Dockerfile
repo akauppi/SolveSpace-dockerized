@@ -2,7 +2,7 @@
 # Dockerfile for SolveSpace
 #
 # Provides:
-#   - ...
+#   - 'build/bin/solvespace' binary
 #
 # Build on Debian, since the project provides build instructions [1] for it.
 #
@@ -11,6 +11,8 @@
 # References:
 #   - Best practices for writing Dockerfiles
 #       -> https://docs.docker.com/develop/develop-images/dockerfile_best-practices/
+#   - "How do you set a locale non-interactively on Debian/Ubuntu?" (NOTE: OLD: 2012..15!)
+#       -> https://serverfault.com/questions/362903/how-do-you-set-a-locale-non-interactively-on-debian-ubuntu/689947#689947
 #
 FROM debian:buster-slim
 
@@ -20,11 +22,11 @@ ENV USER user
 RUN apt-get update && apt-get install -y \
   build-essential \
   cmake \
-  git \
+  locales \
   pkg-config \
   && rm -rf /var/lib/apt/lists/*
   #
-  # git: Needed not only for priming the 'extlib/{libdxfrw|mimalloc}', but also during the 'cmake' build.
+  # locales: needed to run 'build/bin/solvespace' [https://stackoverflow.com/a/54325765/14455]
   # pkg-config: needed by 'cmake' but not mentioned in SolveSpace README
 
 RUN apt-get update && apt-get install -y \
@@ -43,18 +45,14 @@ RUN apt-get update && apt-get install -y \
 #  libfontconfig1-dev \
 #  libglu-dev \
 #  libspnav-dev
-
-# Locales needed when trying to run 'build/bin/solvespace'. [https://stackoverflow.com/a/54325765/14455]
 #
-RUN apt-get update && apt-get install -y \
-  locales \
-  && rm -rf /var/lib/apt/lists/* \
-  && locale-gen "en_US.UTF-8"
-
-#  && localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
-#ENV LANG=en_US.UTF-8 \
-#  LANGUAGE=en_US \
-#  LC_ALL=en_US.UTF-8
+# Note: Having them does not help with the GUI startup issues. ('Unable to create a GL context')
+#
+#RUN apt-get update && apt-get install -y \
+#  libfontconfig1-dev \
+#  libglu-dev \
+#  libspnav-dev \
+#  && rm -rf /var/lib/apt/lists/*
 
 #--- User ---
 # Be eventually a user rather than root
@@ -65,12 +63,6 @@ WORKDIR $HOME
 
 #--- Sources ---
 COPY solvespace.sub ${HOME}/src
-RUN chown -R ${USER} ${HOME}/src
-
-# Now changing to user (no more root)
-USER $USER
-   # $ whoami
-   # user
 
 #--- Build ---
 #
@@ -80,7 +72,29 @@ RUN mkdir build \
   && cd build \
   && cmake ../src -DCMAKE_BUILD_TYPE=Release -DENABLE_OPENMP=ON
 
-RUN cd build \
-  && make
+# Takes 95% of the time...
+RUN cd build && make
+
+#--- Locale ---
+#
+# Needed for executing 'build/bin/solvespace'
+#
+# Adapted from -> https://gist.github.com/shyd/ce8ba7e20d4f825ed3a8e57aa30b892b
+#
+# Note: Tried to avoid the 'ENV LANG=...' and make the Docker internals set it, instead. But this works.
+#
+RUN sed -i '/en_US.UTF-8/s/^# //' /etc/locale.gen \
+  && locale-gen
+ENV LANG=en_US.UTF-8
+
+#RUN chown -R ${USER} ${HOME}/src
+
+# Now changing to user (no more root)
+USER $USER
+   # $ whoami
+   # user
+
+# Docker's host is also the X11 host (you can of course override this with '-e' when launching)
+ENV DISPLAY=host.docker.internal:0
 
 CMD build/bin/solvespace
