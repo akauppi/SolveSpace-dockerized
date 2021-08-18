@@ -1,2 +1,4 @@
 /build/**
 
+# NVIDIA-Linux-x86_64-470.57.02.run
+/NVIDIA-Linux-x86_64-*.run

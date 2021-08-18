@@ -1,0 +1,26 @@
+#
+# Docker Compose file for testing OpenGL rendering (application running in container; GUI in macOS)
+#   - glxgears
+#
+# Usage:
+#   <<
+#     $ xhost +
+#     ...
+#     $ docker compose run --rm glxgears
+#   <<
+#
+version: "3.7"
+
+services:
+  glxgears:
+    # Ubuntu base image would need:
+    #   # apt update && apt install -y x11-apps mesa-utils
+    #
+    #image: ubuntu:16.04
+    image: tbillah/glxgears-docker:latest
+    environment:
+      - "DISPLAY=host.docker.internal:0"
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    command: glxgears
+    #network_mode: "host"
